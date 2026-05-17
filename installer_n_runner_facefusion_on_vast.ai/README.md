@@ -253,7 +253,9 @@ Autorisé :
 # Exemple de lancement
 
 ```bash
-bash /workspace/faceswaping.sh
+0. Lire l'objet "a_lire_par_l-utilisateur" et compléter les variables
+1. Lancer votre agent I.A. cli
+2. Coller installer_n_runner_facefusion_on_vast.ai.json
 ```
 
 ---
