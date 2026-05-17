@@ -9,7 +9,7 @@
 	"source_files":"Sur votre machine source (qui héberge les images de références), uploadez dans ~/facefusion_files/sources toutes les photos des acteurs qui seront apposées sur les videos. Les images doivent être nommées de manière incrémentale (1.jpg, 2.jpg, ...) elles forment les paires avec les videos (image 1.jpg ira avec la video 1.mov)",
 	"target_files":"Sur votre machine source (qui héberge les videos à modifier), uploadez dans ~/facefusion_files/target tous les rushs vidéos à remplacer le visage. Les videos doivent être nommées de manière incrémentale (1.mp4, 2.mov, 3.mp4, ...)",
 	"location":"Louer une machine avec le template cuda sur vast.ai",
-	"cle_ssh": "Creer une cle ssh pour dont la public sera sur vast.ai. Cette cle doit être sur votre poste admin et sur votre serveur source ~/.ssh/vast_ai",
+	"cle_ssh": "Creer une cle ssh pour dont la publique sera sur vast.ai. Cette cle doit être sur votre poste admin et sur votre serveur source ~/.ssh/vast_ai",
 	"cmd_ia_info": "Est la commande de votre agent I.A. sans terminal interactif (voir plus bas)",
 	"à_executer_depuis":"powershell du poste admin",
 	
@@ -33,9 +33,9 @@
 	"how_to": [
 		"0. Lire l'intégralité de {a_lire_par_l-utilisateur} et suivre les recommandations",
 		"1. Adapter les objets et variables",
-		"2. Faire des tests et les renseigner dans ce json",
+		"2. Préparer dossiers et fichiers sur machine source",
 		"3. Louer la machine sur Vast.AI avec template cuda",
-		"4. Préparer dossiers et fichiers sur machine source",
+		"4. Faire des tests et les renseigner dans ce json",
 		"5. Envoyer ce json à votre agent I.A. en local"
 	],
 	
@@ -68,8 +68,8 @@
 		"processeur":"AMD EPYC 7282 16-Core Processor"
 	},
 	"ssh" : {
-		"ip":"172.81.127.43",
-		"port":"19278",
+		"ip":"5.6.7.8",
+		"port":"1234",
 		"user":"root",
 		"cle":"C:\\ma_cle\\ssh\\vast.ai",
 		"connection_ssh": "ssh -p {infos_machine_vast_ai.ssh.port} {infos_machine_vast_ai.ssh.user}@{infos_machine_vast_ai.ssh.ip} -L 8080:localhost:8080 -i '{infos_machine_vast_ai.ssh.cle}"
@@ -132,7 +132,7 @@
 		  "Téléchargement lent quand scp executé sur vast.ai : execution de la commande scp à privilégier sur {ssh_machine_source}"
 		],
 		"acces_ui": [
-		  "Tunnel SSH depuis le poste admin (info à donner pour l'user) : ssh -p PORT_SSH root@IP -i cle_vast_ai -L PORT_GRADIO:localhost:PORT_GRADIO -N",
+		  "Tunnel SSH depuis le poste admin (infos à donner pour l'user) : ssh -p PORT_SSH root@IP -i cle_vast_ai -L PORT_GRADIO:localhost:PORT_GRADIO -N",
 		  "Puis ouvrir http://localhost:PORT_GRADIO dans le navigateur",
 		  "Vérifier le port réel avec : grep 'Running on' /tmp/facefusion.log"
 		]
@@ -413,10 +413,10 @@
   "format": "[STATUS] step_id - resume - next_action",
   "statuses": ["OK", "WARN", "FAIL", "SKIPPED"],
   "couleurs": {
-	  "OK": "bleu",
+	  "OK": "blue",
 	  "WARN": "orange",
 	  "FAIL": "red",
-	  "SKIPPED": "bleu"
+	  "SKIPPED": "blue"
   },
   "examples": [
     "[OK] step_1 - SSH vast.ai accessible, GPU RTX 4090 detecte - continue",
