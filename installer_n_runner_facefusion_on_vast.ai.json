@@ -1,0 +1,426 @@
+{
+"name":"installer_n_runner_facefusion_on_vast.ai",
+"task":"configurer pour la premiere fois un serveur de location à l'heure vast.ai exploitable pour FaceFusion",
+
+"a_lire_par_l-utilisateur": {
+	"agent_ia": "Ne pas exécuter d'actions basées sur cet objet. Ces informations sont destinées uniquement à l'utilisateur humain.",
+	
+	"infos":"Ce script prépare un serveur pour le traitement face swap de plusieurs dizaines de fichier. Les config de Facefusion ont été faite avec mes acteurs. Je recommande de remplacer mes tests par les vôtres.",
+	"source_files":"Sur votre machine source (qui héberge les images de références), uploadez dans ~/facefusion_files/sources toutes les photos des acteurs qui seront apposées sur les videos. Les images doivent être nommées de manière incrémentale (1.jpg, 2.jpg, ...) elles forment les paires avec les videos (l'image 1.jpg ira avec la video 1.mov)",
+	"target_files":"Sur votre machine source (qui héberge les videos à modifier), uploadez dans ~/facefusion_files/target tous les rushs vidéos à remplacer le visage. Les videos doivent être nommées de manière incrémentale (1.mp4, 2.mov, 3.mp4, ...)",
+	"location":"Louer une machine avec le template cuda sur vast.ai",
+	"cle_ssh": "Creer une cle ssh pour dont la public sera sur vast.ai. Cette cle doit être sur votre poste admin et sur votre serveur source ~/.ssh/vast_ai",
+	"cmd_ia_info": "Est la commande de votre agent I.A. sans terminal interactif (voir plus bas)",
+	"à_executer_depuis":"powershell du poste admin",
+	
+	"requirements_videos": [
+		"Une video doit être enregistrée au format 4K 60fps",
+		"Le visage doit être correctement éclairé",
+		"Les contours doivent être bien dessinés",
+		"3 sources de lumières obligatoires pour un rendu optimal",
+		"faire des tests préalable et adapter avec votre acteur",
+		"L'acteur doit toujours regarder la caméra, quelques hochements de tête sont acceptables"
+	],
+	
+	"objets_a_adapter": [
+		"cmd_ia",
+		"machine_source",
+		"api_vast_ai",
+		"infos_machine_vast_ai",
+		"arguments_obligatoires"
+	],
+		
+	"how_to": [
+		"0. Lire l'intégralité de {a_lire_par_l-utilisateur} et suivre les recommandations",
+		"1. Adapter les objets et variables",
+		"2. Faire des tests et les renseigner dans ce json",
+		"3. Louer la machine sur Vast.AI avec template cuda",
+		"4. Préparer dossiers et fichiers sur machine source",
+		"5. Envoyer ce json à votre agent I.A. en local"
+	],
+	
+	"Avertissements_et_Usages":"J'ai dû créer ce prompt pour honorer le plan marketing d'un client dans un cadre complètement légal. La bienveillance veut que je vous rappelle que ce prompt doit être utilisé dans un cadre légal. Si je m’aperçois que des petits rigolos l’utilisent à des fins puériles, je ne manquerai pas de les dénoncer et de m’amuser avec eux.",
+	"credits":"https://www.e-kclt.fr"
+},
+
+"cmd_ia": "claude -p",
+
+"ssh_machine_source": {
+	"ip":"1.2.3.4",
+	"port":"22",
+	"user":"user_unix",
+	"cle":"C:\\ma_cle\\ssh\\machine_source",
+	"connection_ssh": "ssh -p {ssh_machine_source.port} {ssh_machine_source.user}@{ssh_machine_source.ip} -i '{ssh_machine_source.cle}'"
+},
+
+"api_vast_ai": {
+	"token_vast.ai":"VOTRE_TOKEN",
+	"instance_id": 1234567890,
+	"host_id": 1234567890,
+	"machine_id": 1234567890
+},
+
+"infos_machine_vast_ai":{
+	"materiel" : {
+		"vram":"24gb",
+		"max_cuda":"12.8",
+		"carte_graphique":"1x RTX 4090",
+		"processeur":"AMD EPYC 7282 16-Core Processor"
+	},
+	"ssh" : {
+		"ip":"172.81.127.43",
+		"port":"19278",
+		"user":"root",
+		"cle":"C:\\ma_cle\\ssh\\vast.ai",
+		"connection_ssh": "ssh -p {infos_machine_vast_ai.ssh.port} {infos_machine_vast_ai.ssh.user}@{infos_machine_vast_ai.ssh.ip} -L 8080:localhost:8080 -i '{infos_machine_vast_ai.ssh.cle}"
+	},
+	"vars" : {
+		"PATH_FACEFUSION_FILES":"/workspace/facefusion_files"
+	},
+	"problemes_connus": [
+		"Vast.ai attache automatiquement tout login SSH interactif à une session tmux nommée ssh_tmux via .bashrc",
+		"PowerShell heredoc envoie UTF-16 LE : Encoder le script en base64 avant envoi SSH",
+		"SSH sans timeout — sans ConnectTimeout bloque indéfiniment si une connexion accroche sur un appel sha256sum en boucle → ajouter -o ConnectTimeout=10."
+	]
+},
+
+
+
+"appli_a_installer_et_demarrer": {
+	"FaceFusion": {
+		"lien_git": "https://github.com/facefusion/facefusion.git",
+		"destination": "/root/facefusion",
+		"installation": [
+			"IMPORTANT : effectuer toutes les étapes dans un terminal SSH interactif (prompt doit afficher '(main)' = venv actif)",
+			"Script_SSH_corrompu_(BOM) -> PowerShell heredoc envoie UTF-16 LE : Encoder le script en base64 avant envoi SSH",
+			"git clone https://github.com/facefusion/facefusion.git /root/facefusion",
+			"cd /root/facefusion && python3 install.py --onnxruntime cuda --skip-conda",
+			"pip install nvidia-cufft-cu12 nvidia-cublas-cu12 nvidia-cusolver-cu12 nvidia-cusparse-cu12 nvidia-curand-cu12 nvidia-cuda-runtime-cu12",
+			"CUDA_LIB=/usr/local/cuda-13.0/targets/x86_64-linux/lib && for f in $CUDA_LIB/lib*.so.13; do target=\"${f/.so.13/.so.12}\"; [ ! -e \"$target\" ] && ln -sf \"$f\" \"$target\"; done && echo \"$CUDA_LIB\" > /etc/ld.so.conf.d/cuda-13.conf && ldconfig"
+		],
+		"demarrage": [
+		  "source /venv/main/bin/activate",
+		  "mkdir -p {infos_machine_vast_ai.vars.PATH_FACEFUSION_FILES}/outputs",
+		  "Vérification des fichiers à traiter : normalement scp a créé les dossiers {infos_machine_vast_ai.vars.PATH_FACEFUSION_FILES}/sources et {infos_machine_vast_ai.vars.PATH_FACEFUSION_FILES}/targets",
+		  "NVIDIA_LIBS=$(find /venv/main/lib/python3.12/site-packages/nvidia -name 'lib' -type d | tr '\\n' ':') && export LD_LIBRARY_PATH=${NVIDIA_LIBS}/usr/local/cuda-13.0/targets/x86_64-linux/lib:$LD_LIBRARY_PATH",
+		  "cd /root/facefusion && python3 facefusion.py headless-run -s SOURCE -t TARGET -o OUTPUT --processors face_swapper face_enhancer --face-swapper-model hyperswap_1a_256 --face-swapper-pixel-boost 512x512 --face-swapper-weight 0.70 --face-enhancer-model gfpgan_1.4 --face-enhancer-blend 25 --face-mask-types box occlusion --face-mask-blur 0.65 --face-mask-padding 10 14 14 14 --face-detector-size 640x640 --face-detector-score 0.55 --face-landmarker-score 0.55 --output-video-encoder libx264 --output-video-quality 88 --output-video-preset fast --execution-providers cuda --execution-thread-count 20 2>/tmp/facefusion_errors.log"
+		],
+		"ld_library_path_a_definir_avant_tout_lancement": "NVIDIA_LIBS=$(find /venv/main/lib/python3.12/site-packages/nvidia -name 'lib' -type d | tr '\\n' ':') && export LD_LIBRARY_PATH=${NVIDIA_LIBS}/usr/local/cuda-13.0/targets/x86_64-linux/lib:$LD_LIBRARY_PATH",
+		"problemes_connus": [
+		  "--skip-conda obligatoire à l'installation si conda absent",
+		  "--server-port n'existe pas en CLI — utiliser la variable d'env GRADIO_SERVER_PORT",
+		  "Gradio peut ignorer GRADIO_SERVER_PORT et prendre un port différent si le port demandé est occupé — toujours vérifier avec grep 'Running on' /tmp/facefusion.log",
+		  "CUDA 13 sur le serveur, onnxruntime-gpu attend les libs CUDA 12. Double fix nécessaire : (1) pip install nvidia-cufft-cu12 etc. pour les libs avec le bon SONAME (libcufft.so.11 etc.) — les symlinks seuls ne fonctionnent pas car le SONAME est gravé dans le binaire ELF ; (2) créer les symlinks .so.12 pour les libs .so.13 non disponibles en pip : CUDA_LIB=/usr/local/cuda-13.0/targets/x86_64-linux/lib && for f in $CUDA_LIB/lib*.so.13; do target=\"${f/.so.13/.so.12}\"; [ ! -e \"$target\" ] && ln -sf \"$f\" \"$target\"; done",
+		  "Toujours définir LD_LIBRARY_PATH avec les chemins des packages nvidia pip ET le chemin cuda-13 (voir ld_library_path_a_definir_avant_tout_lancement)",
+		  "Au premier démarrage UI, téléchargement automatique de 3 modèles NSFW (~440 Mo) avant ouverture de l'interface — attendre 3-5 min",
+		  "Au premier lancement headless, téléchargement automatique des modèles manquants (ex: hyperswap_1a_256 = 530 Mo) — prévoir plusieurs minutes",
+		  "Arguments headless : --output-video-encoder et --output-video-quality (pas --video-encoder / --video-quality)",
+		  "L'extension du fichier output doit correspondre à celle du fichier target (ex: target .MOV → output .mov)",
+		  "Le dossier output doit exister avant le lancement — mkdir -p {infos_machine_vast_ai.vars.PATH_FACEFUSION_FILES}/outputs",
+		  "En headless, toujours exécuter depuis /root/facefusion avec LD_LIBRARY_PATH — sinon ModuleNotFoundError: cv2",
+		  "Si une install pip ne fonctionne pas, essayer les fallbacks",
+		  "Vast.ai active automatiquement le venv /venv/main au login SSH interactif via .bashrc (présence du préfixe '(main)' dans le prompt). Toutes les commandes pip et python3 doivent être exécutées depuis ce terminal interactif — un SSH non-interactif (ex: commande lancée via PowerShell à distance) installe les packages dans le Python système (/usr/local/lib/python3.12) et non dans le venv, ce qui provoque un ModuleNotFoundError au lancement depuis le terminal interactif",
+		  "'face_swapper could not be loaded' cette erreur apparaît au tout premier lancement si le modèle n'est pas encore téléchargé, elle se résout seule après le download",
+		  "merging video failed : NVIDIA_VISIBLE_DEVICES=void → h264_nvenc inaccessible au niveau kernel -> Ne pas utiliser h264_nvenc prioriser libx264",
+		  "--face-detector-size n'accepte que 640x640",
+		  "-face-swapper-weight: invalid choice: '0.68' (choose from 0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0)",
+		  "--frame_enhancer est extrêmement energivor et demande beaucoup de vram, ou une carte graphique bien suppérieure à la RTX 4090",
+		  "FaceFusion ne purge pas /tmp/facefusion en cas d'échec, un disk full sur overlay 32G peut survenir sur des vidéos longues",
+		  "sur des lourds outputs (suppérieur à 1go) on remarque souvent que l'audio est inexistant",
+		  "CUDA 12.8 vs 13.0 — ce JSON peut référençait /usr/local/cuda-13.0/ mais c'est à adapter suivant la machine actuelle → toujours utiliser le symlink /usr/local/cuda/ dans LD_LIBRARY_PATH.",
+		  "pthread_create failed, error code: 11 (EAGAIN) — le système avait trop de threads actifs au moment du démarrage d'une paire (juste après la fin d'une paire + SCP + nouvelle paire qui démarrait). Le kernel a refusé de créer de nouveaux threads → CUDA EP → fallback CPU → échec chargement modèle xseg_1.",
+		  "Téléchargement lent quand scp executé sur vast.ai : execution de la commande scp à privilégier sur {ssh_machine_source}"
+		],
+		"acces_ui": [
+		  "Tunnel SSH depuis le poste admin (info à donner pour l'user) : ssh -p PORT_SSH root@IP -i cle_vast_ai -L PORT_GRADIO:localhost:PORT_GRADIO -N",
+		  "Puis ouvrir http://localhost:PORT_GRADIO dans le navigateur",
+		  "Vérifier le port réel avec : grep 'Running on' /tmp/facefusion.log"
+		]
+	},
+	"cuda_fallback": {
+		"description": "Si onnxruntime ne charge pas le provider CUDA malgré le LD_LIBRARY_PATH, diagnostiquer avec cette séquence",
+		"etapes": [
+			{
+				"erreur": "cannot open shared object file: No such file or directory",
+				"cause": "La lib n'existe pas du tout dans le LD_LIBRARY_PATH",
+				"fix": "CUDA_LIB=/usr/local/cuda-13.0/targets/x86_64-linux/lib && for f in $CUDA_LIB/lib*.so.13; do target=\"${f/.so.13/.so.12}\"; [ ! -e \"$target\" ] && ln -sf \"$f\" \"$target\"; done && echo \"$CUDA_LIB\" > /etc/ld.so.conf.d/cuda-13.conf && ldconfig"
+			},
+			{
+				"erreur": "version 'libXXX.so.11' not found",
+				"cause": "Le fichier existe mais le SONAME gravé dans le binaire ELF ne correspond pas — les symlinks seuls ne suffisent pas",
+				"fix": "pip install nvidia-cufft-cu12 nvidia-cublas-cu12 nvidia-cusolver-cu12 nvidia-cusparse-cu12 nvidia-curand-cu12 nvidia-cuda-runtime-cu12"
+			},
+			{
+				"erreur": "libcurand manquant malgré pip install",
+				"fix": "apt-get install -y libcurand-dev-12"
+			},
+			{
+				"action": "Après chaque fix, redéfinir LD_LIBRARY_PATH avant de relancer",
+				"commande": "NVIDIA_LIBS=$(find /venv/main/lib/python3.12/site-packages/nvidia -name 'lib' -type d | tr '\\n' ':') && export LD_LIBRARY_PATH=${NVIDIA_LIBS}/usr/local/cuda-13.0/targets/x86_64-linux/lib:$LD_LIBRARY_PATH"
+			},
+			{
+				"action": "Vérifier que le GPU est bien utilisé après relance",
+				"commande": "nvidia-smi",
+				"attendu": "GPU-Util > 0% et Pwr:Usage élevé (>100W) pendant le traitement"
+			}
+		]
+	}
+},
+
+"fichiers_a_telecharger": {
+	"scp_depuis_{ssh_machine_source}":"scp -i '{infos_machine_vast_ai.ssh.cle}' -P {infos_machine_vast_ai.ssh.port} -r ~/facefusion_files {infos_machine_vast_ai.ssh.user}@{infos_machine_vast_ai.ssh.ip}:/workspace"
+},
+
+"creation_des_dossiers_sur_vast": [
+	"{infos_machine_vast_ai.vars.PATH_FACEFUSION_FILES}/outputs",
+	"{infos_machine_vast_ai.vars.PATH_FACEFUSION_FILES}/targets",
+	"{infos_machine_vast_ai.vars.PATH_FACEFUSION_FILES}/sources"
+],
+
+"ordres_dexecution": {
+	"Etape_1": "Verification fonctionnel + création des dossiers sur vast.ai + fuseaux horaires à calibrer sur Paris/France",
+	"Etape_2": [
+		"Toutes les taches de cette étapes doivent IMPERATIVEMENT se faire en parallèle",
+		"Installer Facefusion et verifier son bon fonctionnement",
+		"Télécharger les fichiers depuis {ssh_machine_source} vers vast.ai"
+	],
+	"Etape_3": "vérifier l'existance de l'ensemble des dossiers et fichiers necessaires",
+	"Etape_4": {
+		"task":"faire un test prudent de bon fonctionnement de facefusion en condition réelle avec le premier traitement",
+		"raisons":"(1) tester si tout va bien (2) le premier traitement télécharge tous les models",
+		"execution_thread_count_per_process": 20,
+		"telechargements":"le premier lancement va télécharger tous les modèles (~1Go+) et peut prendre 10-15 min",
+		"matching_extensions":"l'output extension doit correspondre à la target",
+		"fin_run":"donner la commande scp à l'utiisateur pour {ss_machine_source} conformément à {Etape_6_Monitoring-manuel}"
+	},
+	"Etape_5": {
+		"task": "Créer un script bash pour lancer tous les face swaps (à l'exception de celui déjà réalisé) à générer et les répartir correctement sur les GPU des cartes graphiques disponibles",
+		"file's_name":"faceswaping.sh",
+		"destination":"/workspace",
+		"gpu_scheduling": {
+			"gpu_count_detection": "auto via nvidia-smi --query-gpu=index,name,memory.total --format=csv,noheader",
+			"strategy": "un processus FaceFusion par GPU",
+			"max_concurrent_facefusion_processes": "egal au nombre de GPU detectes",
+			"cuda_device_assignment": "chaque process doit etre lance avec CUDA_VISIBLE_DEVICES=<gpu_index>",
+			"execution_thread_count_per_process": 32,
+			"execution_thread_count_note": "32 threads validé OK avec face_swapper + face_enhancer (tests 6, 7 et 8) — réduire à 2 uniquement si frame_enhancer activé (OOM confirmé à 4 threads avec frame_enhancer sur 24GB VRAM)",
+			"oom_policy": "si CUDA out of memory, reduire max_concurrent_facefusion_processes ou execution_thread_count_per_process",
+			"forbidden": [
+				"lancer plusieurs processus lourds sur le meme GPU sauf instruction explicite",
+				"supposer que les GPU sont identiques sans verifier nvidia-smi"
+			]
+		},
+		"nomenclature":"chaque fichier dans les dossiers `{infos_machine_vast_ai.vars.PATH_FACEFUSION_FILES}/sources` et `{infos_machine_vast_ai.vars.PATH_FACEFUSION_FILES}/targets` sont numérotés. La source 1 correspond à la target 1.",
+		"traitement_obligatoire": [
+			"face_swapper",
+			"face_enhancer"
+		],
+		"qualite":"toujours prioriser la qualité du rendu",
+		"logs":"Le script doit sortir en stdout les éléments importants de son execution ainsi que l'avancement des taches en cours tous les 50% ET toutes les 2 minutes",
+		"arguments_obligatoires": [
+			"--output-video-scale 0.75"
+		],
+		"contraintes": [
+			"L'extension du fichier output doit correspondre à celle du fichier target (ex: target .MOV → output .mov)",
+			"cwd_obligatoire -> Toujours exécuter python3 facefusion.py depuis /root/facefusion (cd avant la commande) — FaceFusion charge ses processors depuis le CWD, le chemin absolu seul ne suffit pas",
+			"lorsque le fichier target présente +45fps préciser --output-video-fps 45",
+			"Purger /tmp/facefusion avant chaque paire (rm -rf)"
+		],
+		"exemple":"cd /root/facefusion && NVIDIA_LIBS=$(find /venv/main/lib/python3.12/site-packages/nvidia -name 'lib' -type d | tr '\\n' ':') && export LD_LIBRARY_PATH=${NVIDIA_LIBS}/usr/local/cuda-13.0/targets/x86_64-linux/lib:$LD_LIBRARY_PATH && python3 facefusion.py headless-run -s /workspace/facefusion_files/sources/1.jpg -t /workspace/facefusion_files/targets/1.mp4 -o /workspace/facefusion_files/outputs/1.mp4 --processors face_swapper face_enhancer --face-swapper-model hyperswap_1a_256 --face-swapper-pixel-boost 512x512 --face-swapper-weight 0.70 --face-enhancer-model gfpgan_1.4 --face-enhancer-blend 25 --face-mask-types box occlusion --face-mask-blur 0.65 --face-mask-padding 10 14 14 14 --face-detector-size 640x640 --face-detector-score 0.55 --face-landmarker-score 0.55 --output-video-encoder libx264 --output-video-quality 88 --output-video-preset fast --execution-providers cuda --execution-thread-count 32"
+	},
+	
+	"Etape_6_Monitoring-manuel" : {
+		"task":"Créer un script bash de surveillance des outputs finis",
+		"file's_name":"checking_output.sh",
+		"destination":"/workspace",
+		"sha256":"un 'sha256sum {fichier}' est généré et écrit dans les logs pour vérification en fin de mission",
+		"commande_scp_a_copier_sur_{ssh_machine_source}": "scp -i ~/.ssh/vast_ai -P {infos_machine_vast_ai.ssh.port} {infos_machine_vast_ai.ssh.user}@{infos_machine_vast_ai.ssh.ip}:{infos_machine_vast_ai.vars.PATH_FACEFUSION_FILES}/outputs/{fichier} ~/facefusion_files/outputs/",
+		"constraintes": [
+			"Il doit suivre un logs (par ex: output_finished) que faceswaping.sh écrit en temps réel. Ce fichier liste exclusivement les outputs rendus et terminés de traitement",
+			"Il analyse le fichier pour verifier son intégrité",
+			"Dans le cas d'un succes : Il écrit dans le stdout : [OK] {commande_scp_a_copier_sur_{ssh_machine_source}",
+			"Dans le cas d'un echec : Il écrit dans le stderr : [-KO-] fichier",
+			"Ca sera à l'utilisateur de copier les lignes sorties par ce script (lui informer)",
+			"À chaque cycle de vérification, regrouper toutes les nouvelles sorties [OK] disponibles depuis le dernier read en une seule commande scp multi-fichiers, l'afficher, puis attendre 'Appuyez sur Entrée une fois le scp lancé sur {ssh_machine_source}...'. Ne passer au cycle suivant qu'après confirmation."
+		]
+	},
+	
+	"Etape_7_Monitoring-automatique" : {
+		"task":"création d'un PowerShell de monitoring autonome sur le poste admin (cette machine)",
+		"destination":"%TEMP%",
+		"démarrage":"lance les scripts faceswaping.sh en background sur vast.ai. Ne pas lancer checking_output.sh — le monitoring autonome gère la surveillance et les SCP directement",
+		"lecture_des_logs":"Le script fait un 'cat' en ssh toutes les 15 secondes pour récupérer les logs. Si parsing KO, '{cmd_ia}' au format json pour résoudre le problème et redémarrer la mission",
+		"cron": [
+			"Toutes les 15 secondes",
+			"Affichage le plus tôt possible des erreurs",
+			"Affichage toutes les 5 minutes des dernières lignes de log que produit 'faceswaping.sh', si différentes aux précédentes affichées",
+			"Si nouveau traitements disponibles, lancer 'scp' depuis {ssh_machine_source}. Ne pas oublier les sha256sum. Sortie sur stdout",
+			"Tester les fichiers avec 'sha256sum --check --status {fichier}' sur {ssh_machine_source} ; reconstruction nécessaire si non copié depuis vast.ai",
+			"Supprimer sur vast.ai les fichiers output testés et validés par {ssh_machine_source}"
+		],
+		"fin_de_la_mission": {
+			"task":"verification et arrêt facturation",
+			"Etape_1.presence_fichiers":"vérifier la présence de tous les fichiers output sur {ssh_machine_source} et qu'ils ont bien été testés par 'sha256sum'",
+			"Etape_2.attente_utilisateur":"Attendre une vérification humaine des fichiers",
+			"Etape_3.api_vast_ai":"fermer et cloturer le serveur vast.ai via API",
+			"Etape_4.arrêt_du_script":"récapitulatif complet et attente avant fermeture"
+		},
+		"problemes_connus": [
+			"les fuseaux horaires ne sont pa synchronisés par défaut",
+			"Em-dash UTF-8 sans BOM — — (U+2014) lu en Windows-1252 devient â€\" où \" (0x94) ferme la chaîne PS5.1 prématurément → remplacer par - ou sauvegarder en UTF-8 avec BOM.",
+			"MOTD SSH capturé par 2>&1 — le banner vast.ai part en stderr, PowerShell le transforme en NativeCommandError multi-lignes qui passent le filtre $_.Trim() -ne \"\" → filtrer $_.Trim() -match \"^/\" pour ne garder que les vrais chemins.",
+			"ServerAliveInterval=5 ServerAliveCountMax=3 = SSH se coupe après 15s si le serveur ne répond plus, au lieu de bloquer indéfiniment. À appliquer au prochain redémarrage.",
+			"tmux kill-session au redémarrage — relancer le monitoring tuait la paire en cours → remplacer par tmux has-session -t X || tmux new-session.",
+			"Faux \"fichiers terminés\" — conséquence directe du point 'MOTD SSH capturé' : le monitoring détectait les lignes MOTD comme des fichiers terminés et tentait sha256sum dessus en boucle, bloquant le script pendant plusieurs minutes.",
+			"2>&1 bloque PowerShell sur le stream stderr → remplacer par 2>$null",
+			"tmux has-session sous charge CPU/GPU accroche indéfiniment → wrapper en Start-Job avec Wait-Job -Timeout 20",
+			"Les TimeOut trop court figent le script PowerShell",
+			"SCP synchrone bloque toute la boucle pendant le transfert (~5 min pour 1.9G) → comportement connu, pas encore corrigé",
+			"-notmatch sur tableau mixte (ErrorRecord + String) toujours vrai → convertir avec Out-String avant le test",
+			"en PowerShell 5.1, tout appel à un exécutable natif potentiellement lent (ssh, scp, curl…) doit être wrappé dans Start-Job si un timeout dur est nécessaire. ServerAliveInterval SSH ne suffit pas"
+		],
+	}
+},
+
+
+"constraintes": [
+	"Execute toutes les taches avec des sous-agents pour optimiser le temps",
+	"Chaque tâche doit me rendre un compte rendu simple d'une ligne",
+	"Les SEULES commandes autorisée sur {ssh_machine_source} sont ['scp', 'ls', 'sha256sum']",
+	"sur {ssh_machine_source} tu ne dois rien faire d'autre que copier les fichiers à travailler ou les sorties",
+	"tu n'inventes jamais rien, tu vérifies et si tu n'as pas la réponse, tu demandes",
+	"TOUJOURS m'indiquer l'avancement des taches en cours tous les 50% ET toutes les 2 minutes",
+	"Tu dois optimiser toujours le temps, sépare tes actions dans différents processus"
+],
+
+"permissions": {
+	"vast_ai": {
+		"allowed": [
+		  "ls",
+		  "ssh",
+		  "mkdir",
+		  "git clone",
+		  "pip install",
+		  "python install.py",
+		  "tmux",
+		  "scp reception",
+		  "creation scripts dans /workspace",
+		  "ln -sf",
+		  "ldconfig",
+		  "rm -rf /tmp/facefusion",
+		  "rm -rf outputs transférés et validés par sha256sum dans /workspace",
+		  "execution tests FaceFusion",
+		  "Etape_6_Monitoring-manuel"
+		],
+		"forbidden": [
+		  "suppression de fichiers hors /workspace et /root/facefusion",
+		  "modification firewall systeme",
+		  "modification utilisateurs SSH",
+		  "reboot serveur sans confirmation",
+		  "upgrade global du systeme sans confirmation"
+		]
+	},
+	"{ssh_machine_source}": {
+		"allowed": [
+			"scp",
+			"ls",
+			"sha256sum"
+		],
+		"forbidden" : "all not allowed"
+	},
+	"poste_admin": {
+		"allowed": [
+			"creation du script Etape_7_Monitoring-automatique",
+		],
+		"forbidden" : "all not allowed"
+	}
+},
+
+"tests_realisés_antérieurement": {
+	"materiel" : {
+		"vram":"24gb",
+		"max_cuda":"13.0",
+		"carte_graphique":"1x RTX 4090",
+		"processeur":"AMD EPYC 7542 32-Core Processor"
+	},
+	"test_1-no_named" : {
+		"vram_max_used_MiB":9900,
+		"processing_in_secs":78,
+		"observation_utilisateur":"test sur un rendu oriente natural_premium, quelques décalage avec la tete, on sent trop le collage du visage sur la video, les yeux sont trop gros",
+		"config":"--processors face_swapper face_enhancer --face-swapper-model hyperswap_1a_256 --face-swapper-pixel-boost 1024x1024 --face-swapper-weight 0.80 --face-enhancer-model gfpgan_1.4 --face-enhancer-blend 45 --output-video-encoder libx264 --output-video-quality 90 --output-video-preset fast --execution-providers cuda --execution-thread-count 12 --face-detector-size 640x640 --face-detector-score 0.5"
+	},
+	"test_2-natural_premium_v2" : {
+		"vram_max_used_MiB":10769,
+		"processing_in_secs":365,
+		"observation_utilisateur":"test sur un rendu oriente encore plus natural_premium que le test 1 pour éviter les bugs rencontrés. --face-detector-size n'accepte que 640x640. Léger tremblement au niveau d'un contre-jour qu'il y a sur la video source mais ne pas prendre en compte cette mauvaise qualité source. Par contre, documenté les conséquences. Les yeux sont de mieux en mieux mais encore des légers ajustements sont à prévoir. En termes de 'visage collé' on a grandement améliorer le rendu, encore à ajuster. Je suis ok d'accepter 365 secondes d'execution pour un rendu meilleur",
+		"config":"--processors face_swapper face_enhancer --face-swapper-model hyperswap_1a_256 --face-swapper-pixel-boost 512x512 --face-swapper-weight 0.65 --face-enhancer-model gfpgan_1.4 --face-enhancer-blend 30 --face-mask-types box occlusion --face-mask-blur 0.55 --face-mask-padding 8 12 12 12 --face-detector-size 640x640 --face-detector-score 0.60 --face-landmarker-score 0.60 --output-video-encoder libx264 --output-video-quality 90 --output-video-preset fast --execution-providers cuda --execution-thread-count 20"
+	},
+	"test_3-max_vram_aggressive" : {
+		"vram_max_used_MiB":"dont_know",
+		"processing_in_secs":112,
+		"observation_utilisateur":"yeux gros, visage un peu trop sensation collé",
+		"config":"--processors face_swapper face_enhancer  --face-swapper-model hyperswap_1a_256 --face-swapper-pixel-boost 1024x1024  --face-swapper-weight 0.90 --face-enhancer-model gfpgan_1.4 --face-enhancer-blend 50  --output-video-encoder libx264 --output-video-quality 95 --output-video-preset fast  --execution-providers cuda --execution-thread-count 8   --face-detector-size 640x640 --face-detector-score 0.5"
+	},
+	"test_3-no_named" : {
+		"vram_max_used_MiB":"dont_know",
+		"processing_in_secs":91,
+		"observation_utilisateur":"yeux quasi-ok, on sent encore trop le collage",
+		"config":"--processors face_swapper face_enhancer --face-swapper-model hyperswap_1a_256 --face-enhancer-model gfpgan_1.4 --face-enhancer-blend 100 --output-video-encoder libx264 --output-video-quality 100 --output-video-preset fast --execution-providers cuda --execution-thread-count 4 --face-swapper-pixel-boost 512x512 --face-swapper-weight 0.55 --face-detector-size 640x640 --face-detector-score 0.5"
+	},
+	"test_4-cinematic" : {
+		"vram_max_used_MiB":12893,
+		"processing_in_secs":371,
+		"observation_utilisateur":"on approche vraiment du but ! yeux=8.5/10 ; visage=7/10 on voit sur les contour un double visage (la barbe dépasse et avec la transparence, on voit l'oreille aussi) qu'on ne voyait pas sur test_2-natural_premium_v2 ; sourcils:on voit apparaitre une autre pairs de sourcils 1.5cm plus haut très légèrement et on les voyait déjà sur test_2-natural_premium_v2 ; je suis clairement d'accord de prendre 371secondes pour ce résultat",
+		"config":"--processors face_swapper face_enhancer --face-swapper-model hyperswap_1a_256 --face-swapper-pixel-boost 512x512 --face-swapper-weight 0.70 --face-enhancer-model gfpgan_1.4 --face-enhancer-blend 25 --face-mask-types box occlusion --face-mask-blur 0.65 --face-mask-padding 10 14 14 14 --face-detector-size 640x640 --face-detector-score 0.55 --face-landmarker-score 0.55 --output-video-encoder libx264 --output-video-quality 88 --output-video-preset fast --execution-providers cuda --execution-thread-count 20"
+	},
+	"test_5-natual-premium-v3" : {
+		"vram_max_used_MiB":12049,
+		"processing_in_secs":390,
+		"observation_utilisateur":"",
+		"config":"--processors face_swapper face_enhancer --face-swapper-model hyperswap_1a_256 --face-swapper-pixel-boost 512x512 --face-swapper-weight 0.70 --face-enhancer-model gfpgan_1.4 --face-enhancer-blend 25 --face-mask-types box occlusion --face-mask-blur 0.50 --face-mask-padding 4 8 10 8 --face-detector-size 640x640 --face-detector-score 0.55 --face-landmarker-score 0.55 --output-video-encoder libx264 --output-video-quality 90 --output-video-preset fast --execution-providers cuda --execution-thread-count 20"
+	},
+	"test_6-32_threads" : {
+		"vram_max_used_MiB":14605,
+		"processing_in_secs":347,
+		"observation_utilisateur":"test uniquement pour verifier la différence de temps de process. Environ 11% de temps gagné, à ne surtout pas négliger sur un nombre de vidéos conséquent.",
+		"config":"--processors face_swapper face_enhancer --face-swapper-model hyperswap_1a_256 --face-swapper-pixel-boost 512x512 --face-swapper-weight 0.70 --face-enhancer-model gfpgan_1.4 --face-enhancer-blend 25 --face-mask-types box occlusion --face-mask-blur 0.50 --face-mask-padding 4 8 10 8 --face-detector-size 640x640 --face-detector-score 0.55 --face-landmarker-score 0.55 --output-video-encoder libx264 --output-video-quality 90 --output-video-preset fast --execution-providers cuda --execution-thread-count 32"
+	},
+	"test_7-natural_premium_v4_anti_sourcils" : {
+		"vram_max_used_MiB":16061,
+		"processing_in_secs":330,
+		"observation_utilisateur":"",
+		"config":"--processors face_swapper face_enhancer --face-swapper-model hyperswap_1a_256 --face-swapper-pixel-boost 512x512 --face-swapper-weight 0.7 --face-enhancer-model gfpgan_1.4 --face-enhancer-blend 25 --face-mask-types box occlusion --face-mask-blur 0.45 --face-mask-padding 2 8 10 8 --face-detector-size 640x640 --face-detector-score 0.55 --face-landmarker-score 0.55 --output-video-encoder libx264 --output-video-quality 90 --output-video-preset fast --execution-providers cuda --execution-thread-count 32"
+	},
+	"test_8-nouvelle_video_target_cinematic" : {
+		"vram_max_used_MiB":15417,
+		"processing_in_secs":682,
+		"observation_utilisateur":"nous sommes passés sur une résolution 4K 2160x3840, à prendre en compte pour le temps d'execution ; test ultra concluant. On garde ces paramètres comme référence de base",
+		"config":"--processors face_swapper face_enhancer --face-swapper-model hyperswap_1a_256 --face-swapper-pixel-boost 512x512 --face-swapper-weight 0.70 --face-enhancer-model gfpgan_1.4 --face-enhancer-blend 25 --face-mask-types box occlusion --face-mask-blur 0.65 --face-mask-padding 10 14 14 14 --face-detector-size 640x640 --face-detector-score 0.55 --face-landmarker-score 0.55 --output-video-encoder libx264 --output-video-quality 88 --output-video-preset fast --execution-providers cuda --execution-thread-count 32"
+	}
+},
+
+"stop_conditions": [
+  "connexion SSH impossible",
+  "GPU non detecte par nvidia-smi",
+  "CUDA/onnxruntime incompatible apres tentative de correction",
+  "OOM GPU persistant après réduction thread_count à 1",
+  "FaceFusion ne demarre pas apres 2 tentatives",
+  "fichiers sources ou targets absents",
+  "erreur necessitant suppression ou modification hors perimetre autorise"
+],
+
+"reporting": {
+  "format": "[STATUS] step_id - resume - next_action",
+  "statuses": ["OK", "WARN", "FAIL", "SKIPPED"],
+  "couleurs": {
+	  "OK": "bleu",
+	  "WARN": "orange",
+	  "FAIL": "red",
+	  "SKIPPED": "bleu"
+  },
+  "examples": [
+    "[OK] step_1 - SSH vast.ai accessible, GPU RTX 4090 detecte - continue",
+    "[FAIL] step_2 - FaceFusion install.py failed: missing libcublasLt.so.12 - correction requise"
+  ]
+}
+}
