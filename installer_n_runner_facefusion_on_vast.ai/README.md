@@ -1,4 +1,4 @@
-# FaceFusion Vast.ai Automation
+# FaceFusion Vast.ai Automation (installer_n_runner_facefusion_on_vast.ai)
 
 ## Description
 
@@ -128,7 +128,7 @@ CUDA
 
 ---
 
-# Script batch principal
+# Script bash principal
 
 ## Fichier
 
@@ -176,26 +176,6 @@ Depuis le poste Windows admin :
 - Suppression des outputs validés
 - Possibilité de shutdown Vast.ai via API
 
----
-
-# Variables sensibles
-
-Ne jamais commit publiquement :
-
-```json
-{
-  "token_vast.ai": "VOTRE_TOKEN",
-  "ip": "X.X.X.X",
-  "port": "22",
-  "user": "root",
-  "cle": "~/.ssh/id_rsa",
-  "instance_id": "XXXX",
-  "host_id": "XXXX",
-  "machine_id": "XXXX"
-}
-```
-
----
 
 # Risques et problèmes connus
 
@@ -254,7 +234,7 @@ Autorisé :
 
 Autorisé :
 
-- génération scripts PowerShell
+- génération script monitoring PowerShell
 - monitoring
 - API Vast.ai
 
@@ -294,4 +274,7 @@ Automatiser entièrement un pipeline FaceFusion GPU distribué sur Vast.ai avec 
 - reprise sur erreur
 - transfert sécurisé
 - vérification d’intégrité
-- traitement batch massif
+- traitement PowerShell et Bash
+
+# Crédits
+https://www.e-kclt.fr
